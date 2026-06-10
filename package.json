@@ -1,0 +1,57 @@
+{
+  "name": "mcp-debugger-node",
+  "version": "0.1.0",
+  "description": "MCP server for debugging Node.js programs through the V8 Inspector Protocol.",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "bin": {
+    "mcp-debugger-node": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "author": "Mohammed Almassri",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mohammed-almassri/mcp-debugger-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mohammed-almassri/mcp-debugger-node/issues"
+  },
+  "homepage": "https://github.com/mohammed-almassri/mcp-debugger-node#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "debugger",
+    "node",
+    "nodejs",
+    "inspector",
+    "v8-inspector",
+    "cdp"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/ws": "^8.18.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
+  }
+}
