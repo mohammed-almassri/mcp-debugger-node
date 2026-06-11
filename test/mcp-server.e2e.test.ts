@@ -8,15 +8,33 @@ type E2ESession = {
   transport: StdioClientTransport;
 };
 
-type ToolResult = Awaited<ReturnType<Client["callTool"]>>;
+type ToolResult = {
+  content: unknown[];
+  isError?: boolean;
+};
 
 type PauseResult = {
   reason?: string;
-  functionName: string;
+  functionName?: string;
   lineNumber: number;
   exception?: {
     className?: string;
     description?: string;
+  };
+};
+
+type ResetResult = {
+  inspectorUrl: string;
+  target: ReturnType<typeof fixtureTarget>;
+};
+
+type BreakpointResult = {
+  breakpointId: string;
+};
+
+type EvaluateStringResult = {
+  result?: {
+    value?: string;
   };
 };
 
@@ -29,39 +47,148 @@ const fixtureTarget = (name: string) => ({
   args: ["--inspect-brk=0", fixturePath(name)],
 });
 
-const firstText = (result: ToolResult): string => {
-  const content = result.content[0];
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
-  if (content?.type !== "text") {
+const firstText = (result: ToolResult): string => {
+  const [content] = result.content;
+
+  if (
+    !isRecord(content) ||
+    content.type !== "text" ||
+    typeof content.text !== "string"
+  ) {
     throw new Error("Expected first tool result content item to be text.");
   }
 
   return content.text;
 };
 
-const parseToolJson = <T>(result: ToolResult): T =>
-  JSON.parse(firstText(result)) as T;
+const parseToolJson = (result: ToolResult): unknown =>
+  JSON.parse(firstText(result)) as unknown;
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+const requireRecord = (
+  value: unknown,
+  expected: string,
+): Record<string, unknown> => {
+  if (!isRecord(value)) {
+    throw new Error(`Expected ${expected} to be an object.`);
+  }
+
+  return value;
+};
+
+const asResetResult = (value: unknown): ResetResult => {
+  const result = requireRecord(value, "reset result");
+  const target = requireRecord(result.target, "reset target");
+
+  if (
+    typeof result.inspectorUrl !== "string" ||
+    typeof target.cwd !== "string" ||
+    typeof target.command !== "string" ||
+    !isStringArray(target.args)
+  ) {
+    throw new Error(
+      "Expected reset result to include an inspector URL and target.",
+    );
+  }
+
+  return {
+    inspectorUrl: result.inspectorUrl,
+    target: {
+      cwd: target.cwd,
+      command: target.command,
+      args: target.args,
+    },
+  };
+};
+
+const asBreakpointResult = (value: unknown): BreakpointResult => {
+  const result = requireRecord(value, "breakpoint result");
+
+  if (typeof result.breakpointId !== "string") {
+    throw new Error("Expected breakpoint result to include breakpointId.");
+  }
+
+  return {
+    breakpointId: result.breakpointId,
+  };
+};
+
+const asPauseResult = (value: unknown): PauseResult => {
+  const result = requireRecord(value, "pause result");
+  const exception =
+    result.exception === undefined
+      ? undefined
+      : requireRecord(result.exception, "pause exception");
+
+  if (typeof result.lineNumber !== "number") {
+    throw new Error("Expected pause result to include lineNumber.");
+  }
+
+  return {
+    reason: typeof result.reason === "string" ? result.reason : undefined,
+    functionName:
+      typeof result.functionName === "string" ? result.functionName : undefined,
+    lineNumber: result.lineNumber,
+    exception:
+      exception === undefined
+        ? undefined
+        : {
+            className:
+              typeof exception.className === "string"
+                ? exception.className
+                : undefined,
+            description:
+              typeof exception.description === "string"
+                ? exception.description
+                : undefined,
+          },
+  };
+};
+
+const asEvaluateStringResult = (value: unknown): EvaluateStringResult => {
+  const response = requireRecord(value, "evaluate result");
+  const result =
+    response.result === undefined
+      ? undefined
+      : requireRecord(response.result, "evaluate result payload");
+
+  return {
+    result:
+      result === undefined
+        ? undefined
+        : {
+            value: typeof result.value === "string" ? result.value : undefined,
+          },
+  };
+};
 
 const propertyValue = (
   response: unknown,
   name: string,
 ): string | number | boolean | undefined => {
-  const properties = (response as {
-    result?: Array<{
-      name?: string;
-      value?: { value?: string | number | boolean };
-    }>;
-  }).result;
+  const properties = (
+    response as {
+      result?: Array<{
+        name?: string;
+        value?: { value?: string | number | boolean };
+      }>;
+    }
+  ).result;
 
   return properties?.find((property) => property.name === name)?.value?.value;
 };
 
-const callJsonTool = async <T>(
+const callJsonTool = async (
   client: Client,
   name: string,
   args: Record<string, unknown> = {},
-): Promise<T> =>
-  parseToolJson<T>(
+): Promise<unknown> =>
+  parseToolJson(
     await client.callTool({
       name,
       arguments: args,
@@ -108,8 +235,10 @@ describe("MCP server e2e", () => {
   const resetToFixture = async (
     client: Client,
     name: string,
-  ): Promise<{ inspectorUrl: string; target: ReturnType<typeof fixtureTarget> }> =>
-    callJsonTool(client, "reset", { target: fixtureTarget(name) });
+  ): Promise<ResetResult> =>
+    asResetResult(
+      await callJsonTool(client, "reset", { target: fixtureTarget(name) }),
+    );
 
   const pauseAtSimpleScriptBreakpoint = async (
     client: Client,
@@ -173,13 +302,11 @@ describe("MCP server e2e", () => {
     const { client } = await createSession();
     await resetToFixture(client, "simple-script.js");
 
-    const breakpoint = await callJsonTool<{ breakpointId: string }>(
-      client,
-      "set_breakpoint",
-      {
+    const breakpoint = asBreakpointResult(
+      await callJsonTool(client, "set_breakpoint", {
         urlRegex: "simple-script\\.js$",
         lineNumber: 5,
-      },
+      }),
     );
 
     expect(breakpoint.breakpointId).toContain("simple-script");
@@ -205,7 +332,7 @@ describe("MCP server e2e", () => {
     await callJsonTool(client, "set_pause_on_exceptions", { state: "all" });
     await resetToFixture(client, "startup-exception.js");
 
-    const pause = await callJsonTool<PauseResult>(client, "resume");
+    const pause = asPauseResult(await callJsonTool(client, "resume"));
     expect(pause.reason).toBe("exception");
     expect(pause.exception?.className).toBe("Error");
     expect(pause.exception?.description).toContain("fixture startup failure");
@@ -229,7 +356,7 @@ describe("MCP server e2e", () => {
     const { client } = await createSession();
     await resetToFixture(client, "long-running.js");
 
-    const pause = await callJsonTool<PauseResult>(client, "wait_for_pause");
+    const pause = asPauseResult(await callJsonTool(client, "wait_for_pause"));
 
     expect(pause.reason).toBe("Break on start");
     expect(pause.lineNumber).toBe(0);
@@ -243,7 +370,7 @@ describe("MCP server e2e", () => {
       lineNumber: 5,
     });
 
-    const pause = await callJsonTool<PauseResult>(client, "resume");
+    const pause = asPauseResult(await callJsonTool(client, "resume"));
 
     expect(pause.reason).toBe("other");
     expect(pause.lineNumber).toBe(5);
@@ -253,7 +380,7 @@ describe("MCP server e2e", () => {
     const { client } = await createSession();
     await pauseAtSimpleScriptBreakpoint(client);
 
-    const pause = await callJsonTool<PauseResult>(client, "step_over");
+    const pause = asPauseResult(await callJsonTool(client, "step_over"));
 
     expect(pause.reason).toBe("step");
     expect(pause.lineNumber).toBe(7);
@@ -263,7 +390,7 @@ describe("MCP server e2e", () => {
     const { client } = await createSession();
     await pauseAtFunctionCallBreakpoint(client);
 
-    const pause = await callJsonTool<PauseResult>(client, "step_into");
+    const pause = asPauseResult(await callJsonTool(client, "step_into"));
 
     expect(pause.reason).toBe("step");
     expect(pause.functionName).toBe("double");
@@ -275,7 +402,7 @@ describe("MCP server e2e", () => {
     await callJsonTool(client, "step_into");
     await callJsonTool(client, "step_over");
 
-    const variables = await callJsonTool<unknown>(client, "get_variables");
+    const variables = await callJsonTool(client, "get_variables");
 
     expect(propertyValue(variables, "value")).toBe(21);
     expect(propertyValue(variables, "result")).toBe(42);
@@ -285,10 +412,10 @@ describe("MCP server e2e", () => {
     const { client } = await createSession();
     await pauseAtSimpleScriptBreakpoint(client);
 
-    const evaluated = await callJsonTool<{ result?: { value?: string } }>(
-      client,
-      "evaluate",
-      { expression: "JSON.stringify(arr)" },
+    const evaluated = asEvaluateStringResult(
+      await callJsonTool(client, "evaluate", {
+        expression: "JSON.stringify(arr)",
+      }),
     );
 
     expect(evaluated.result?.value).toBe("[10,20,30]");

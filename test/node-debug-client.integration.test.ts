@@ -30,9 +30,14 @@ const propertyValue = (
   response: unknown,
   name: string,
 ): string | number | boolean | undefined => {
-  const properties = (response as {
-    result?: Array<{ name?: string; value?: { value?: string | number | boolean } }>;
-  }).result;
+  const properties = (
+    response as {
+      result?: Array<{
+        name?: string;
+        value?: { value?: string | number | boolean };
+      }>;
+    }
+  ).result;
 
   return properties?.find((property) => property.name === name)?.value?.value;
 };
@@ -40,15 +45,15 @@ const propertyValue = (
 describe("NodeDebugClient integration", () => {
   let client: NodeDebugClient | null = null;
 
-  const createClient = async (): Promise<NodeDebugClient> => {
-    client = await NodeDebugClient.create();
+  const createClient = (): NodeDebugClient => {
+    client = NodeDebugClient.create();
     return client;
   };
 
   const resetToFixture = async (
     name: string,
   ): Promise<Awaited<ReturnType<NodeDebugClient["resetSession"]>>> => {
-    const debugClient = client ?? (await createClient());
+    const debugClient = client ?? createClient();
 
     return debugClient.resetSession({
       target: fixtureTarget(name),
@@ -56,7 +61,7 @@ describe("NodeDebugClient integration", () => {
   };
 
   const pauseAtSimpleScriptBreakpoint = async (): Promise<NodeDebugClient> => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
     unwrap(await resetToFixture("simple-script.js"));
     unwrap(
       await debugClient.setBreakpoint({
@@ -70,7 +75,7 @@ describe("NodeDebugClient integration", () => {
   };
 
   const pauseAtFunctionCallBreakpoint = async (): Promise<NodeDebugClient> => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
     unwrap(await resetToFixture("function-call.js"));
     unwrap(
       await debugClient.setBreakpoint({
@@ -91,7 +96,7 @@ describe("NodeDebugClient integration", () => {
   });
 
   it("resetSession starts a target and returns the inspector URL", async () => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
 
     const result = unwrap(await resetToFixture("long-running.js"));
 
@@ -105,7 +110,7 @@ describe("NodeDebugClient integration", () => {
   });
 
   it("stop stops the active target and clears the session", async () => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
     unwrap(await resetToFixture("long-running.js"));
 
     unwrap(await debugClient.stop());
@@ -118,7 +123,7 @@ describe("NodeDebugClient integration", () => {
   });
 
   it("setBreakpoint binds a breakpoint by URL regex", async () => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
     unwrap(await resetToFixture("simple-script.js"));
 
     const breakpoint = unwrap(
@@ -132,7 +137,7 @@ describe("NodeDebugClient integration", () => {
   });
 
   it("setPauseOnExceptions configures startup exception pauses", async () => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
 
     unwrap(await debugClient.setPauseOnExceptions({ state: "all" }));
     unwrap(await resetToFixture("startup-exception.js"));
@@ -144,7 +149,7 @@ describe("NodeDebugClient integration", () => {
   });
 
   it("continue resumes execution and returns immediately", async () => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
     unwrap(await resetToFixture("long-running.js"));
 
     unwrap(await debugClient.continue());
@@ -157,7 +162,7 @@ describe("NodeDebugClient integration", () => {
   });
 
   it("waitForPause returns the current pause when already paused", async () => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
     unwrap(await resetToFixture("long-running.js"));
 
     const pause = unwrap(await debugClient.waitForPause());
@@ -167,7 +172,7 @@ describe("NodeDebugClient integration", () => {
   });
 
   it("resume resumes execution and waits for the next pause", async () => {
-    const debugClient = await createClient();
+    const debugClient = createClient();
     unwrap(await resetToFixture("simple-script.js"));
     unwrap(
       await debugClient.setBreakpoint({
