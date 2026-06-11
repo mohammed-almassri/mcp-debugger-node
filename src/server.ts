@@ -132,7 +132,7 @@ export const createServer = (debugClient: IDebugClient): McpServer => {
   );
 
   server.registerTool(
-    "stepover",
+    "step_over",
     {
       title: "Step over",
       description: "Step over the current statement.",
@@ -143,7 +143,7 @@ export const createServer = (debugClient: IDebugClient): McpServer => {
   );
 
   server.registerTool(
-    "stepinto",
+    "step_into",
     {
       title: "Step into",
       description: "Step into the next function call.",
@@ -154,7 +154,7 @@ export const createServer = (debugClient: IDebugClient): McpServer => {
   );
 
   server.registerTool(
-    "getvariables",
+    "get_variables",
     {
       title: "Get variables",
       description: "Get variables for the latest paused call frame scope.",
