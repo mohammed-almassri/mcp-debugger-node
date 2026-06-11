@@ -36,6 +36,16 @@ jobs:
             echo "Tag v$TAG_VERSION does not match package.json version $PACKAGE_VERSION"
             exit 1
           fi
+      - name: Debug publish identity
+        run: |
+          npm --version
+          node --version
+          npm whoami || true
+          echo "repo=$GITHUB_REPOSITORY"
+          echo "workflow=$GITHUB_WORKFLOW"
+          echo "workflow_ref=$GITHUB_WORKFLOW_REF"
+          echo "ref=$GITHUB_REF"
+          echo "ref_name=$GITHUB_REF_NAME"
 
       - name: Lint, format, build, and test
         run: npm test
