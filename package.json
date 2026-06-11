@@ -1,6 +1,6 @@
 {
   "name": "mcp-debugger-node",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server for debugging Node.js programs through the V8 Inspector Protocol.",
   "main": "dist/index.js",
   "type": "commonjs",
