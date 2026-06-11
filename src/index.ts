@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import NodeDebugClient from "./client/NodeDebugClient";
 import { createServer } from "./server";
 
-(async () => {
+void (async () => {
   let debugClient: NodeDebugClient | null = null;
   let shuttingDown = false;
 
@@ -18,7 +18,7 @@ import { createServer } from "./server";
   };
 
   try {
-    debugClient = await NodeDebugClient.create();
+    debugClient = NodeDebugClient.create();
     const server = createServer(debugClient);
 
     process.once("SIGINT", () => {

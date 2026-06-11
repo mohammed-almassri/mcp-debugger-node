@@ -52,6 +52,17 @@ type ResetSessionResponse = {
   target: DebugTargetConfig;
 };
 
+type InspectorMessage = {
+  id?: number;
+  method?: string;
+  params?: unknown;
+  result?: unknown;
+  error?: unknown;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 export default class NodeDebugClient implements IDebugClient {
   private pauseOnExceptions: PauseOnExceptionsRequest["state"] = "uncaught";
   private target: DebugTargetConfig | null = null;
@@ -65,10 +76,10 @@ export default class NodeDebugClient implements IDebugClient {
   private pauseWaiters: PauseWaiter[] = [];
   private pending = new Map<
     number,
-    { resolve: (value: any) => void; reject: (reason?: unknown) => void }
+    { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
   >();
 
-  static async create(): Promise<NodeDebugClient> {
+  static create(): NodeDebugClient {
     return new NodeDebugClient();
   }
 
@@ -445,14 +456,14 @@ export default class NodeDebugClient implements IDebugClient {
     const ws = this.ws;
 
     try {
-      const value = await new Promise<T>((resolve, reject) => {
+      const value = await new Promise<unknown>((resolve, reject) => {
         this.pending.set(id, { resolve, reject });
         ws.send(JSON.stringify(payload));
       });
 
       return {
         type: "ok",
-        value,
+        value: value as T,
       };
     } catch (err) {
       return {
@@ -463,19 +474,25 @@ export default class NodeDebugClient implements IDebugClient {
   }
 
   private onMessage(text: string) {
-    let message: {
-      id?: number;
-      method?: string;
-      params?: unknown;
-      result?: unknown;
-      error?: unknown;
-    };
+    let parsed: unknown;
 
     try {
-      message = JSON.parse(text);
+      parsed = JSON.parse(text) as unknown;
     } catch {
       return;
     }
+
+    if (!isRecord(parsed)) {
+      return;
+    }
+
+    const message: InspectorMessage = {
+      id: typeof parsed.id === "number" ? parsed.id : undefined,
+      method: typeof parsed.method === "string" ? parsed.method : undefined,
+      params: parsed.params,
+      result: parsed.result,
+      error: parsed.error,
+    };
 
     if (message.method !== undefined) {
       this.onNotification(message.method, message.params);

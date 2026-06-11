@@ -17,12 +17,8 @@ export type SetBreakpointResponse = {
 };
 
 export const DebugTargetSchema = z.object({
-  cwd: z
-    .string()
-    .describe("Working directory to run the debug target in"),
-  command: z
-    .string()
-    .describe("Command used to start the debug target"),
+  cwd: z.string().describe("Working directory to run the debug target in"),
+  command: z.string().describe("Command used to start the debug target"),
   args: z
     .array(z.string())
     .describe(
@@ -45,9 +41,7 @@ export const PauseOnExceptionsSchema = z.object({
     .enum(["none", "uncaught", "all"])
     .describe("Which exceptions should pause the debugger."),
 });
-export type PauseOnExceptionsRequest = z.infer<
-  typeof PauseOnExceptionsSchema
->;
+export type PauseOnExceptionsRequest = z.infer<typeof PauseOnExceptionsSchema>;
 
 export type PausedLocation = {
   reason?: string;
