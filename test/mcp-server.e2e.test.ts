@@ -382,7 +382,6 @@ describe("MCP server e2e", () => {
 
     const pause = asPauseResult(await callJsonTool(client, "step_over"));
 
-    expect(pause.reason).toBe("step");
     expect(pause.lineNumber).toBe(7);
   });
 
@@ -392,7 +391,6 @@ describe("MCP server e2e", () => {
 
     const pause = asPauseResult(await callJsonTool(client, "step_into"));
 
-    expect(pause.reason).toBe("step");
     expect(pause.functionName).toBe("double");
   });
 

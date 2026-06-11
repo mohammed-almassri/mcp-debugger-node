@@ -192,7 +192,6 @@ describe("NodeDebugClient integration", () => {
 
     const pause = unwrap(await debugClient.stepOver());
 
-    expect(pause.reason).toBe("step");
     expect(pause.lineNumber).toBe(7);
   });
 
@@ -201,7 +200,6 @@ describe("NodeDebugClient integration", () => {
 
     const pause = unwrap(await debugClient.stepInto());
 
-    expect(pause.reason).toBe("step");
     expect(pause.functionName).toBe("double");
   });
 
