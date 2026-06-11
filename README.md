@@ -1,5 +1,11 @@
 # mcp-debugger-node
 
+[![npm version](https://img.shields.io/npm/v/mcp-debugger-node.svg)](https://www.npmjs.com/package/mcp-debugger-node)
+[![npm beta](https://img.shields.io/npm/v/mcp-debugger-node/beta.svg?label=beta)](https://www.npmjs.com/package/mcp-debugger-node)
+[![npm downloads](https://img.shields.io/npm/dm/mcp-debugger-node.svg)](https://www.npmjs.com/package/mcp-debugger-node)
+[![CI](https://github.com/mohammed-almassri/mcp-debugger-node/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammed-almassri/mcp-debugger-node/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/mcp-debugger-node.svg)](LICENSE)
+
 MCP server for debugging Node.js programs through the V8 Inspector Protocol.
 
 This server gives an AI agent debugger-style tools: start a Node process under
@@ -16,11 +22,14 @@ inspect variables, and evaluate expressions in the current call frame.
 This package is meant to be started by an MCP client over stdio:
 
 ```bash
-npx -y mcp-debugger-node
+npx -y mcp-debugger-node@beta
 ```
 
 You usually do not run that command by hand. Instead, add it to your agent or
 editor MCP configuration.
+
+The project is still in beta, so `@beta` is recommended until the first stable
+`1.0.0` release.
 
 ### Codex
 
@@ -29,7 +38,7 @@ Add this to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.node-debugger]
 command = "npx"
-args = ["-y", "mcp-debugger-node"]
+args = ["-y", "mcp-debugger-node@beta"]
 ```
 
 ### Claude Code
@@ -37,7 +46,7 @@ args = ["-y", "mcp-debugger-node"]
 Use the Claude Code MCP CLI:
 
 ```bash
-claude mcp add node-debugger -- npx -y mcp-debugger-node
+claude mcp add node-debugger -- npx -y mcp-debugger-node@beta
 ```
 
 For a project-local config, run that command from the project you want to
@@ -53,7 +62,7 @@ Create or update `.vscode/mcp.json`:
     "node-debugger": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-debugger-node"]
+      "args": ["-y", "mcp-debugger-node@beta"]
     }
   }
 }
@@ -66,7 +75,7 @@ Use a stdio server entry with:
 ```json
 {
   "command": "npx",
-  "args": ["-y", "mcp-debugger-node"]
+  "args": ["-y", "mcp-debugger-node@beta"]
 }
 ```
 
@@ -118,8 +127,8 @@ For simple scripts:
 1. Call `reset` with a target.
 2. Call `set_breakpoint`.
 3. Call `resume`.
-4. Call `getvariables` or `evaluate`.
-5. Use `stepover` or `stepinto` as needed.
+4. Call `get_variables` or `evaluate`.
+5. Use `step_over` or `step_into` as needed.
 
 For event-driven servers:
 
@@ -128,7 +137,7 @@ For event-driven servers:
 3. Call `continue`.
 4. Trigger the event with curl, a browser, a test runner, or another tool.
 5. Call `wait_for_pause`.
-6. Inspect runtime state with `getvariables` and `evaluate`.
+6. Inspect runtime state with `get_variables` and `evaluate`.
 7. Call `continue` again to let the request finish.
 
 Example endpoint debugging flow:
@@ -147,7 +156,7 @@ continue
 curl http://localhost:3000/api/users
 wait_for_pause
 evaluate {"expression":"req.url"}
-getvariables
+get_variables
 continue
 ```
 
@@ -229,15 +238,15 @@ Resume execution and wait for the next pause.
 This is convenient for scripts where the next pause will happen without an
 external trigger.
 
-### `stepover`
+### `step_over`
 
 Step over the current statement and wait for the next pause.
 
-### `stepinto`
+### `step_into`
 
 Step into the next function call and wait for the next pause.
 
-### `getvariables`
+### `get_variables`
 
 Get variables for the latest paused call frame scope.
 
